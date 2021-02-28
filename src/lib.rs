@@ -32,24 +32,35 @@ pub fn max_compress_len(input_len: usize) -> usize {
 pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
     init();
     unsafe {
-        let mut wrkmem : [u8; 0] = std::mem::uninitialized();
+        let mut wrkmem: [u8; 0] = std::mem::uninitialized();
         let mut out_len = 0;
-        let r = raw::lzo1x_decompress(input.as_ptr(), input.len() as u64, output.as_mut_ptr(), &out_len as *const _ as *mut _, wrkmem.as_mut_ptr() as *mut c_void);
+        let r = raw::lzo1x_decompress(
+            input.as_ptr(),
+            input.len() as u64,
+            output.as_mut_ptr(),
+            &out_len as *const _ as *mut _,
+            wrkmem.as_mut_ptr() as *mut c_void,
+        );
         if !r == 0 {
             panic!("Failed to decompress, exit code: {}", r);
         }
         out_len as usize
     }
-
 }
 
 pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
     init();
     unsafe {
-        let mut wrkmem : [u8; 64000] = std::mem::uninitialized();
+        let mut wrkmem: [u8; 64000] = std::mem::uninitialized();
 
         let mut out_len = 0;
-        let v = raw::lzo1x_1_compress(input.as_ptr(), input.len() as u64, output.as_mut_ptr(), &out_len as *const _ as *mut _, wrkmem.as_mut_ptr() as *mut c_void);
+        let v = raw::lzo1x_1_compress(
+            input.as_ptr(),
+            input.len() as u64,
+            output.as_mut_ptr(),
+            &out_len as *const _ as *mut _,
+            wrkmem.as_mut_ptr() as *mut c_void,
+        );
         if !v == 0 {
             panic!("Failed to compress, exit code: {}", v);
         }
@@ -59,7 +70,7 @@ pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use crate::{compress, max_compress_len, decompress};
+    use crate::{compress, decompress, max_compress_len};
 
     #[test]
     fn test_roundtrip() {
@@ -67,12 +78,18 @@ mod tests {
 
         let mut compressed = vec![0; max_compress_len(input.len())];
         let n_bytes = compress(&input, compressed.as_mut_slice());
-        println!("{:?}", String::from_utf8_lossy(&compressed[..n_bytes].to_vec()));
+        println!(
+            "{:?}",
+            String::from_utf8_lossy(&compressed[..n_bytes].to_vec())
+        );
         println!("Output length: {}", n_bytes);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
         let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
-        println!("{:?}", String::from_utf8_lossy(&decompressed[..n_bytes].to_vec()));
+        println!(
+            "{:?}",
+            String::from_utf8_lossy(&decompressed[..n_bytes].to_vec())
+        );
         println!("Output length: {}", n_bytes);
     }
 }
