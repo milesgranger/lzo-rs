@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use ::libc;
 extern "C" {
     #[no_mangle]
@@ -508,6 +510,28 @@ pub unsafe extern "C" fn _lzo_config_check() -> libc::c_int {
     return if r == 1 as libc::c_int as libc::c_uint {
                0 as libc::c_int
            } else { -(1 as libc::c_int) };
+}
+#[no_mangle]
+pub unsafe extern "C" fn lzo_initialize() -> libc::c_int {
+    return __lzo_init_v2(0x20a0 as libc::c_int as libc::c_uint,
+                         ::std::mem::size_of::<libc::c_short>() as
+                             libc::c_ulong as libc::c_int,
+                         ::std::mem::size_of::<libc::c_int>() as libc::c_ulong
+                             as libc::c_int,
+                         ::std::mem::size_of::<libc::c_long>() as
+                             libc::c_ulong as libc::c_int,
+                         ::std::mem::size_of::<libc::c_uint>() as
+                             libc::c_ulong as libc::c_int,
+                         ::std::mem::size_of::<lzo_uint>() as libc::c_ulong as
+                             libc::c_int,
+                         ::std::mem::size_of::<*mut libc::c_uchar>() as
+                             libc::c_ulong as libc::c_uint as libc::c_int,
+                         ::std::mem::size_of::<*mut libc::c_char>() as
+                             libc::c_ulong as libc::c_int,
+                         ::std::mem::size_of::<*mut libc::c_void>() as
+                             libc::c_ulong as libc::c_int,
+                         ::std::mem::size_of::<lzo_callback_t>() as
+                             libc::c_ulong as libc::c_int);
 }
 #[no_mangle]
 pub unsafe extern "C" fn __lzo_init_v2(mut v: libc::c_uint,

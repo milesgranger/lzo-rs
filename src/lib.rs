@@ -13,4 +13,39 @@
 
 extern crate libc;
 
+use std::ffi::c_void;
+
 pub mod raw;
+
+pub fn init() {
+    let r = unsafe { raw::lzo_initialize() };
+    if !r == 0 {
+        panic!("Failed initialize LZO!");
+    }
+}
+
+pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
+    init();
+    unsafe {
+        let mut wrkmem = vec![0; 64000];
+        let mut out_len = 0;
+        let v = raw::lzo1x_1_compress(input.as_ptr(), input.len() as u64, output.as_mut_ptr(), out_len as *mut u64, wrkmem.as_mut_ptr() as *mut c_void);
+        if !v == 0 {
+            panic!("Failed to compress, exit code: {}", v);
+        }
+        out_len as usize
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::compress;
+
+    #[test]
+    fn test_compress() {
+        let input = b"Oh what a beautiful day, oh what a beaitufl morning!!!".to_vec();
+        let mut output = vec![0; 100];
+        let n_bytes = compress(&input, output.as_mut_slice());
+        println!("{:?}", String::from_utf8(output));
+    }
+}
