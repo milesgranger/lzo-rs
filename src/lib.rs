@@ -12,7 +12,6 @@
 #![register_tool(c2rust)]
 
 extern crate libc;
-
 use std::ffi::c_void;
 
 pub mod raw;
@@ -74,22 +73,19 @@ mod tests {
 
     #[test]
     fn test_roundtrip() {
-        let input = b"Oh what a beautiful day, oh what a beaitufl morning!!!".to_vec();
+        let input = (0..10000)
+            .map(|_| b"Oh what a beautiful day, oh what a beaitufl morning!!!".to_vec())
+            .flat_map(|v| v)
+            .collect::<Vec<u8>>();
 
         let mut compressed = vec![0; max_compress_len(input.len())];
         let n_bytes = compress(&input, compressed.as_mut_slice());
-        println!(
-            "{:?}",
-            String::from_utf8_lossy(&compressed[..n_bytes].to_vec())
-        );
         println!("Output length: {}", n_bytes);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
         let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
-        println!(
-            "{:?}",
-            String::from_utf8_lossy(&decompressed[..n_bytes].to_vec())
-        );
         println!("Output length: {}", n_bytes);
+
+        assert_eq!(&decompressed[..n_bytes], input.as_slice());
     }
 }
