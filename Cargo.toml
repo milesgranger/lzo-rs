@@ -1,17 +1,14 @@
 [package]
-name = "minilzo-rs"
-authors = ["C2Rust"]
-version = "0.0.0"
-publish = false
+name = "rust-minilzo"
+version = "0.1.0"
+authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
-autobins = false
+license-file = "LICENSE"
+readme = "README.md"
+description = "Pure Rust implementation of minilzo; initially created with c2rust."
 
 [lib]
-name = "minilzo_rs"
-crate-type = ["staticlib", "rlib"]
+name = "rust_minilzo"
 
 [dependencies]
 libc = "0.2"
-
-
-
