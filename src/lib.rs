@@ -27,23 +27,25 @@ pub fn max_compress_len(input_len: usize) -> usize {
     input_len + (input_len / 16) + 64 + 3
 }
 
-pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
+pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
     init();
-    unsafe {
+    let (n_bytes_written, n_bytes_consumed) = unsafe {
         let mut wrkmem: [u8; 0] = std::mem::uninitialized();
-        let mut out_len = 0;
-        let r = raw::lzo1x_decompress_safe(
+        let mut out_len: u32 = 0;
+        let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
             input.as_ptr(),
             input.len() as u64,
             output.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
         );
-        if !r == 0 {
+        if r != 0 && r != -8 {
             panic!("Failed to decompress, exit code: {}", r);
         }
-        out_len as usize
-    }
+        (out_len, n_consumed_bytes)
+    };
+    (n_bytes_written as usize, n_bytes_consumed as usize)
+
 }
 
 pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
@@ -59,7 +61,7 @@ pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
         );
-        if !v == 0 {
+        if v != 0 {
             panic!("Failed to compress, exit code: {}", v);
         }
         out_len as usize
@@ -158,25 +160,6 @@ impl<R: io::Read> Decoder<R> {
         if buf.len() == 0 {
             return Ok(0)
         }
-        if self.position > 0 {
-            if self.remaining_chunk_length >= buf.len() {
-                buf.copy_from_slice(&self.dst[self.position..self.position + buf.len()]);
-                self.position += buf.len();
-                self.remaining_chunk_length -= buf.len();
-                if self.remaining_chunk_length <= 0 {
-                    self.remaining_chunk_length = 0;
-                    self.position = 0;
-                }
-                return Ok(buf.len())
-            } else {
-                buf[..self.remaining_chunk_length].copy_from_slice(&self.dst[self.position..self.position + self.remaining_chunk_length]);
-                let n_bytes = self.remaining_chunk_length;
-                self.position = 0;
-                self.remaining_chunk_length = 0;
-                return Ok(n_bytes)
-            }
-
-        }
 
         self.src = [0; MAX_BLOCK_COMPRESS_SIZE];
         let n_bytes = self.inner.read(self.src.as_mut())?;
@@ -184,15 +167,15 @@ impl<R: io::Read> Decoder<R> {
             return Ok(0)
         }
         self.dst = [0; BLOCK_SIZE];
-        let n_decompressed_bytes = decompress(&self.src[..n_bytes], self.dst.as_mut());
-        if n_decompressed_bytes <= buf.len() {
-            buf[..n_decompressed_bytes].copy_from_slice(&self.dst[..n_decompressed_bytes]);
-            Ok(n_decompressed_bytes)
+        let (n_bytes_written, n_bytes_consumed) = decompress(&self.src[..n_bytes], self.dst.as_mut());
+        if n_bytes_written <= buf.len() {
+            buf[..n_bytes_written].copy_from_slice(&self.dst[..n_bytes_written]);
+            Ok(n_bytes_written)
         } else {
             let len = buf.len();
             buf.copy_from_slice(&self.dst[..len]);
             self.position = buf.len();
-            self.remaining_chunk_length = n_decompressed_bytes - buf.len();
+            self.remaining_chunk_length = n_bytes_written - buf.len();
             Ok(buf.len())
         }
     }
@@ -215,6 +198,7 @@ impl<R: io::Read> io::Read for Decoder<R> {
 #[cfg(test)]
 mod tests {
     use crate::{compress, decompress, max_compress_len, Encoder, Decoder};
+    use std::io::{Cursor, Read};
 
     fn gen_data() -> Vec<u8> {
         (0..10000)
@@ -231,21 +215,18 @@ mod tests {
         let n_bytes = compress(&input, compressed.as_mut_slice());
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
-        let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
+        let (n_bytes_written, _n_bytes_consumed) = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
 
-        assert_eq!(&decompressed[..n_bytes], input.as_slice());
+        assert_eq!(&decompressed[..n_bytes_written], input.as_slice());
     }
 
     #[test]
-    fn test_encoder() {
+    fn test_encoder_decoder() {
         let data = gen_data()[..64005].to_vec();
         let mut encoder = Encoder::new(data.as_slice());
 
         let mut compressed = vec![];
         let n = std::io::copy(&mut encoder, &mut compressed).unwrap();
-        println!("Output vec size: {}", compressed.len());
-        println!("Bytes copied: {}", n);
-        println!("compressed: {:?}", &compressed);
 
         let mut decompressed = vec![0; data.len()];
         let mut decoder = Decoder::new(compressed.as_slice());

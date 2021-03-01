@@ -1358,15 +1358,15 @@ pub unsafe extern "C" fn lzo1x_decompress(
         -(4 as libc::c_int)
     };
 }
-/* safe decompression with overrun testing */
-#[no_mangle]
-pub unsafe extern "C" fn lzo1x_decompress_safe(
+/// safe decompression with overrun testing */
+/// Returns a tuple of <<result_code, n_bytes_consumed_from_input>>
+pub unsafe fn lzo1x_decompress_safe(
     mut in_0: *const libc::c_uchar,
     mut in_len: lzo_uint,
     mut out: *mut libc::c_uchar,
     mut out_len: *mut lzo_uint,
     mut wrkmem: *mut libc::c_void,
-) -> libc::c_int {
+) -> (libc::c_int, u32) {
     let mut current_block: u64;
     let mut op: *mut libc::c_uchar = 0 as *mut libc::c_uchar;
     let mut ip: *const libc::c_uchar = 0 as *const libc::c_uchar;
@@ -1416,7 +1416,7 @@ pub unsafe extern "C" fn lzo1x_decompress_safe(
                     match current_block {
                         262178057513751245 => {
                             *out_len = op.offset_from(out) as libc::c_long as lzo_uint;
-                            return -(5 as libc::c_int);
+                            return (-(5 as libc::c_int), ip.offset_from(in_0) as u32);
                         }
                         3938046190763135880 => {
                             let fresh80 = ip;
@@ -1740,11 +1740,11 @@ pub unsafe extern "C" fn lzo1x_decompress_safe(
                                         *out_len = op.offset_from(out) as libc::c_long
                                             as lzo_uint;
                                         return if ip == ip_end {
-                                            0 as libc::c_int
+                                            (0 as libc::c_int, ip.offset_from(in_0) as u32)
                                         } else if ip < ip_end {
-                                            -(8 as libc::c_int)
+                                            (-(8 as libc::c_int), ip.offset_from(in_0) as u32)
                                         } else {
-                                            -(4 as libc::c_int)
+                                            (-(4 as libc::c_int), ip.offset_from(in_0) as u32)
                                         };
                                     } else {
                                         m_pos = m_pos.offset(-(0x4000 as libc::c_int as isize))
@@ -1904,13 +1904,13 @@ pub unsafe extern "C" fn lzo1x_decompress_safe(
                     10472394685181188800 => {}
                     _ => {
                         *out_len = op.offset_from(out) as libc::c_long as lzo_uint;
-                        return -(6 as libc::c_int);
+                        return (-(6 as libc::c_int), ip.offset_from(in_0) as u32);
                     }
                 }
             }
         }
     }
     *out_len = op.offset_from(out) as libc::c_long as lzo_uint;
-    return -(4 as libc::c_int);
+    return (-(4 as libc::c_int), ip.offset_from(in_0) as u32);
 }
 /* **** End of minilzo.c *****/
