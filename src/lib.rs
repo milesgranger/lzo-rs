@@ -106,7 +106,7 @@ impl<R: io::Read> Encoder<R> {
 
         // compress the source buffer
         self.dst = [0; MAX_BLOCK_COMPRESS_SIZE];
-        let n_compressed_bytes = compress(&self.src, self.dst.as_mut());
+        let n_compressed_bytes = compress(&self.src[..n_bytes], self.dst.as_mut());
 
         // write and much as we can into this output buffer
         if n_compressed_bytes <= buf.len() {
