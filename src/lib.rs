@@ -29,7 +29,7 @@ pub fn max_compress_len(input_len: usize) -> usize {
 pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
     init();
     let (n_bytes_written, n_bytes_consumed) = unsafe {
-        let mut wrkmem: [u8; 0] = std::mem::uninitialized();
+        let mut wrkmem: [u8; 0] = std::mem::MaybeUninit::uninit().assume_init();
         let mut out_len: u32 = 0;
         let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
             input.as_ptr(),
@@ -49,7 +49,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
 pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
     init();
     unsafe {
-        let mut wrkmem: [u8; 64000] = std::mem::uninitialized();
+        let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
 
         let mut out_len = 0;
         let v = raw::lzo1x_1_compress(
@@ -198,7 +198,6 @@ impl<R: io::Read> io::Read for Decoder<R> {
 #[cfg(test)]
 mod tests {
     use crate::{compress, decompress, max_compress_len, Decoder, Encoder};
-    use std::io::{Cursor, Read};
 
     fn gen_data() -> Vec<u8> {
         (0..10000)
