@@ -96,32 +96,32 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize, MiniLzoError
 /// buffer.
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize, MiniLzoError> {
     init()?;
-    unsafe {
-        let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
 
-        let mut out_len = 0;
-        let mut out = if header {
-            &mut output[5..]
-        } else {
-            &mut output[..]
-        };
-        let r = raw::lzo1x_1_compress(
+    let mut out_len = 0;
+    let mut out = if header {
+        &mut output[5..]
+    } else {
+        &mut output[..]
+    };
+    let r = unsafe {
+        let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
+        raw::lzo1x_1_compress(
             input.as_ptr(),
             input.len() as u64,
             out.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
-        );
-        if r != 0 {
-            return Err(MiniLzoError::LzoError { code: r as i8 });
-        }
-        if header {
-            output[0] = 0xf0;
-            output[1..5].copy_from_slice(&(input.len() as u32).to_be_bytes());
-            out_len += 5;
-        }
-        Ok(out_len as usize)
+        )
+    };
+    if r != 0 {
+        return Err(MiniLzoError::LzoError { code: r as i8 });
     }
+    if header {
+        output[0] = 0xf0;
+        output[1..5].copy_from_slice(&(input.len() as u32).to_be_bytes());
+        out_len += 5;
+    }
+    Ok(out_len as usize)
 }
 
 /// Convenience function to compress input into an appropriately sized output buffer, optionally
