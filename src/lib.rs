@@ -6,21 +6,34 @@
 #![allow(unused_mut)]
 
 extern crate libc;
-use std::ffi::c_void;
-use std::io;
 use std::convert::TryInto;
+use std::ffi::c_void;
+use thiserror::Error;
 
 pub(crate) mod raw;
 
 const BLOCK_SIZE: usize = 64000;
 const MAX_BLOCK_COMPRESS_SIZE: usize = BLOCK_SIZE + (BLOCK_SIZE / 16) + 64 + 3;
 
+#[derive(Error, Debug)]
+pub enum MiniLzoError {
+    #[error("Header expected but not found.")]
+    NoHeader,
+    #[error("Invalid header format.")]
+    InvalidHeader,
+    #[error("LZO initialization failed: {code:?}")]
+    LzoInit { code: i8 },
+    #[error("LZO de/compression error: {code:?}")]
+    LzoError { code: i8 },
+}
 
 // Required by LZO to be called before operations
-fn init() {
+fn init() -> Result<(), MiniLzoError> {
     let r = unsafe { raw::lzo_initialize() };
     if r != 0 {
-        panic!("Failed initialize LZO!");
+        Err(MiniLzoError::LzoInit { code: r as i8 })
+    } else {
+        Ok(())
     }
 }
 
@@ -36,21 +49,23 @@ pub fn max_compress_len(input_len: usize) -> usize {
 /// Will always fail if the input does not contain a header; if this is your case, you'll need
 /// to pre-allocate a vec of appropriate length for decompression output and use [decompress](fn.decompress.html)
 /// directly.
-pub fn decompress_vec(input: &[u8]) -> Vec<u8> {
+pub fn decompress_vec(input: &[u8]) -> Result<Vec<u8>, MiniLzoError> {
     if [0xf0, 0xf1].contains(&input[0]) {
-        let length_bytes: [u8; 4] = input[1..5].try_into().unwrap();
+        let length_bytes: [u8; 4] = input[1..5]
+            .try_into()
+            .map_err(|_| MiniLzoError::InvalidHeader)?;
         let mut output = vec![0; u32::from_be_bytes(length_bytes) as usize];
-        let n = decompress(&input[5..], output.as_mut_slice());
+        let n = decompress(&input[5..], output.as_mut_slice())?;
         output.truncate(n);
-        output
+        Ok(output)
     } else {
-        todo!("Only support for input with header")
+        Err(MiniLzoError::NoHeader)
     }
 }
 
 /// Decompress input into output. Will ignore any header if present in the input.
-pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
-    init();
+pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize, MiniLzoError> {
+    init()?;
 
     // Determine if there is a header
     let input_buf = if [0xf0, 0xf1].contains(&input[0]) {
@@ -70,48 +85,52 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
             wrkmem.as_mut_ptr() as *mut c_void,
         );
         if r != 0 {
-            panic!("Failed to decompress, exit code: {}", r);
+            return Err(MiniLzoError::LzoError { code: r as i8 });
         }
         (out_len, n_consumed_bytes)
     };
-    n_bytes_written as usize
+    Ok(n_bytes_written as usize)
 }
 
 /// Compress input into output buffer, optionally with a header written to the front of the output
 /// buffer.
-pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
-    init();
+pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize, MiniLzoError> {
+    init()?;
     unsafe {
         let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
 
         let mut out_len = 0;
-        let mut out = if header { &mut output[5..] } else { &mut output[..] };
-        let v = raw::lzo1x_1_compress(
+        let mut out = if header {
+            &mut output[5..]
+        } else {
+            &mut output[..]
+        };
+        let r = raw::lzo1x_1_compress(
             input.as_ptr(),
             input.len() as u64,
             out.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
         );
-        if v != 0 {
-            panic!("Failed to compress, exit code: {}", v);
+        if r != 0 {
+            return Err(MiniLzoError::LzoError { code: r as i8 });
         }
         if header {
             output[0] = 0xf0;
             output[1..5].copy_from_slice(&(input.len() as u32).to_be_bytes());
             out_len += 5;
         }
-        out_len as usize
+        Ok(out_len as usize)
     }
 }
 
 /// Convenience function to compress input into an appropriately sized output buffer, optionally
 /// with a header.
-pub fn compress_vec(input: &[u8], header: bool) -> Vec<u8> {
+pub fn compress_vec(input: &[u8], header: bool) -> Result<Vec<u8>, MiniLzoError> {
     let mut output = vec![0; max_compress_len(input.len())];
-    let n = compress(input, output.as_mut_slice(), header);
+    let n = compress(input, output.as_mut_slice(), header)?;
     output.truncate(n);
-    output
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -130,11 +149,11 @@ mod tests {
         let input = b"bytes".to_vec();
 
         let mut compressed = vec![0; max_compress_len(input.len())];
-        let n_bytes = compress(&input, compressed.as_mut_slice(), true);
+        let n_bytes = compress(&input, compressed.as_mut_slice(), true).unwrap();
         println!("{:?}", &compressed[..n_bytes]);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
-        let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
+        let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice()).unwrap();
 
         assert_eq!(&decompressed[..n_bytes], input.as_slice());
     }

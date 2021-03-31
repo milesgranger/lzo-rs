@@ -12,3 +12,4 @@ name = "rust_minilzo"
 
 [dependencies]
 libc = "0.2"
+thiserror = "^1"
