@@ -1,4 +1,10 @@
 #![allow(unused_variables)]
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(unused_assignments)]
+#![allow(unused_mut)]
 
 use ::libc;
 extern "C" {
@@ -19,14 +25,11 @@ pub struct lzo_callback_t {
     pub user2: lzo_uint,
     pub user3: lzo_uint,
 }
-pub type lzo_progress_func_t = Option<
-    unsafe extern "C" fn(_: *mut lzo_callback_t, _: lzo_uint, _: lzo_uint, _: libc::c_int) -> (),
->;
-pub type lzo_free_func_t =
-    Option<unsafe extern "C" fn(_: *mut lzo_callback_t, _: *mut libc::c_void) -> ()>;
-pub type lzo_alloc_func_t = Option<
-    unsafe extern "C" fn(_: *mut lzo_callback_t, _: lzo_uint, _: lzo_uint) -> *mut libc::c_void,
->;
+pub type lzo_progress_func_t =
+    Option<unsafe fn(_: *mut lzo_callback_t, _: lzo_uint, _: lzo_uint, _: libc::c_int) -> ()>;
+pub type lzo_free_func_t = Option<unsafe fn(_: *mut lzo_callback_t, _: *mut libc::c_void) -> ()>;
+pub type lzo_alloc_func_t =
+    Option<unsafe fn(_: *mut lzo_callback_t, _: lzo_uint, _: lzo_uint) -> *mut libc::c_void>;
 pub type lzo_memops_TU8 = libc::c_ulong;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -38,42 +41,37 @@ pub union lzo_config_check_union {
 pub type lzo_memops_TU4 = libc::c_uint;
 pub type lzo_memops_TU2 = libc::c_ushort;
 #[inline(always)]
-unsafe extern "C" fn lzo_bitops_ctlz32_func(mut v: libc::c_uint) -> libc::c_uint {
+unsafe fn lzo_bitops_ctlz32_func(mut v: libc::c_uint) -> libc::c_uint {
     let mut r: libc::c_uint = 0;
     r = v.leading_zeros() as i32 as libc::c_uint;
     return r;
 }
 #[inline(always)]
-unsafe extern "C" fn lzo_bitops_ctlz64_func(mut v: libc::c_ulong) -> libc::c_uint {
+unsafe fn lzo_bitops_ctlz64_func(mut v: libc::c_ulong) -> libc::c_uint {
     let mut r: libc::c_uint = 0;
     r = v.leading_zeros() as i32 as libc::c_uint;
     return r;
 }
 #[inline(always)]
-unsafe extern "C" fn lzo_bitops_cttz32_func(mut v: libc::c_uint) -> libc::c_uint {
+unsafe fn lzo_bitops_cttz32_func(mut v: libc::c_uint) -> libc::c_uint {
     let mut r: libc::c_uint = 0;
     r = v.trailing_zeros() as i32 as libc::c_uint;
     return r;
 }
 #[inline(always)]
-unsafe extern "C" fn lzo_bitops_cttz64_func(mut v: libc::c_ulong) -> libc::c_uint {
+unsafe fn lzo_bitops_cttz64_func(mut v: libc::c_ulong) -> libc::c_uint {
     let mut r: libc::c_uint = 0;
     r = v.trailing_zeros() as i32 as libc::c_uint;
     return r;
 }
-unsafe extern "C" fn lzo_bitops_unused_funcs() {}
-#[no_mangle]
-pub unsafe extern "C" fn __lzo_ptr_linear(mut ptr: *const libc::c_void) -> libc::c_ulong {
+unsafe fn lzo_bitops_unused_funcs() {}
+pub unsafe fn __lzo_ptr_linear(mut ptr: *const libc::c_void) -> libc::c_ulong {
     let mut p: libc::c_ulong = 0;
     p = ptr as libc::c_ulong;
     return p;
 }
 /* align a char pointer on a boundary that is a multiple of 'size' */
-#[no_mangle]
-pub unsafe extern "C" fn __lzo_align_gap(
-    mut ptr: *const libc::c_void,
-    mut size: lzo_uint,
-) -> libc::c_uint {
+pub unsafe fn __lzo_align_gap(mut ptr: *const libc::c_void, mut size: lzo_uint) -> libc::c_uint {
     let mut p: libc::c_ulong = 0;
     let mut n: libc::c_ulong = 0;
     if size < 2 as libc::c_int as libc::c_ulong {
@@ -102,33 +100,26 @@ static mut lzo_version_string_: [libc::c_char; 5] =
     unsafe { *::std::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"2.10\x00") };
 static mut lzo_version_date_: [libc::c_char; 12] =
     unsafe { *::std::mem::transmute::<&[u8; 12], &[libc::c_char; 12]>(b"Mar 01 2017\x00") };
-#[no_mangle]
-pub unsafe extern "C" fn lzo_copyright() -> *const libc::c_uchar {
+pub unsafe fn lzo_copyright() -> *const libc::c_uchar {
     return lzo_copyright_.as_ptr() as *const libc::c_uchar;
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_version() -> libc::c_uint {
+pub unsafe fn lzo_version() -> libc::c_uint {
     return 0x20a0 as libc::c_int as libc::c_uint;
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_version_string() -> *const libc::c_char {
+pub unsafe fn lzo_version_string() -> *const libc::c_char {
     return lzo_version_string_.as_ptr();
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_version_date() -> *const libc::c_char {
+pub unsafe fn lzo_version_date() -> *const libc::c_char {
     return lzo_version_date_.as_ptr();
 }
-#[no_mangle]
-pub unsafe extern "C" fn _lzo_version_string() -> *const libc::c_char {
+pub unsafe fn _lzo_version_string() -> *const libc::c_char {
     return lzo_version_string_.as_ptr();
 }
-#[no_mangle]
-pub unsafe extern "C" fn _lzo_version_date() -> *const libc::c_char {
+pub unsafe fn _lzo_version_date() -> *const libc::c_char {
     return lzo_version_date_.as_ptr();
 }
 /* checksum functions */
-#[no_mangle]
-pub unsafe extern "C" fn lzo_adler32(
+pub unsafe fn lzo_adler32(
     mut adler: libc::c_uint,
     mut buf: *const libc::c_uchar,
     mut len: lzo_uint,
@@ -248,8 +239,7 @@ pub unsafe extern "C" fn lzo_adler32(
     }
     return s2 << 16 as libc::c_int | s1;
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_memcmp(
+pub unsafe fn lzo_memcmp(
     mut s1: *const libc::c_void,
     mut s2: *const libc::c_void,
     mut len: lzo_uint,
@@ -296,24 +286,21 @@ pub unsafe extern "C" fn lzo_memcmp(
  */
 /* version functions (useful for shared libraries) */
 /* string functions */
-#[no_mangle]
-pub unsafe extern "C" fn lzo_memcpy(
+pub unsafe fn lzo_memcpy(
     mut dest: *mut libc::c_void,
     mut src: *const libc::c_void,
     mut len: lzo_uint,
 ) -> *mut libc::c_void {
     return memcpy(dest, src, len);
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_memmove(
+pub unsafe fn lzo_memmove(
     mut dest: *mut libc::c_void,
     mut src: *const libc::c_void,
     mut len: lzo_uint,
 ) -> *mut libc::c_void {
     return memmove(dest, src, len);
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_memset(
+pub unsafe fn lzo_memset(
     mut s: *mut libc::c_void,
     mut cc: libc::c_int,
     mut len: lzo_uint,
@@ -321,12 +308,11 @@ pub unsafe extern "C" fn lzo_memset(
     return memset(s, cc, len);
 }
 #[inline(never)]
-unsafe extern "C" fn u2p(mut ptr: *mut libc::c_void, mut off: lzo_uint) -> *mut libc::c_void {
+unsafe fn u2p(mut ptr: *mut libc::c_void, mut off: lzo_uint) -> *mut libc::c_void {
     return (ptr as *mut libc::c_uchar).offset(off as isize) as *mut libc::c_void;
 }
 /* misc. */
-#[no_mangle]
-pub unsafe extern "C" fn _lzo_config_check() -> libc::c_int {
+pub unsafe fn _lzo_config_check() -> libc::c_int {
     let mut u: lzo_config_check_union = lzo_config_check_union { a: [0; 2] };
     let mut p: *mut libc::c_void = 0 as *mut libc::c_void;
     let mut r: libc::c_uint = 1 as libc::c_int as libc::c_uint;
@@ -454,8 +440,7 @@ pub unsafe extern "C" fn _lzo_config_check() -> libc::c_int {
         -(1 as libc::c_int)
     };
 }
-#[no_mangle]
-pub unsafe extern "C" fn lzo_initialize() -> libc::c_int {
+pub unsafe fn lzo_initialize() -> libc::c_int {
     return __lzo_init_v2(
         0x20a0 as libc::c_int as libc::c_uint,
         ::std::mem::size_of::<libc::c_short>() as libc::c_ulong as libc::c_int,
@@ -469,8 +454,7 @@ pub unsafe extern "C" fn lzo_initialize() -> libc::c_int {
         ::std::mem::size_of::<lzo_callback_t>() as libc::c_ulong as libc::c_int,
     );
 }
-#[no_mangle]
-pub unsafe extern "C" fn __lzo_init_v2(
+pub unsafe fn __lzo_init_v2(
     mut v: libc::c_uint,
     mut s1: libc::c_int,
     mut s2: libc::c_int,
@@ -517,7 +501,7 @@ pub unsafe extern "C" fn __lzo_init_v2(
     return r;
 }
 #[inline(never)]
-unsafe extern "C" fn lzo1x_1_compress_core(
+unsafe fn lzo1x_1_compress_core(
     mut in_0: *const libc::c_uchar,
     mut in_len: lzo_uint,
     mut out: *mut libc::c_uchar,
@@ -550,8 +534,7 @@ unsafe extern "C" fn lzo1x_1_compress_core(
     'c_3244: loop {
         ip = ip.offset(
             (1 as libc::c_int as libc::c_long
-                + (ip.offset_from(ii) as libc::c_long >> 5 as libc::c_int))
-                as isize,
+                + (ip.offset_from(ii) as libc::c_long >> 5 as libc::c_int)) as isize,
         );
         loop {
             if (ip >= ip_end) as libc::c_int as libc::c_long != 0 {
@@ -866,8 +849,7 @@ unsafe extern "C" fn lzo1x_1_compress_core(
  * When the required size is 0, you can also pass a NULL pointer.
  */
 /* compression */
-#[no_mangle]
-pub unsafe extern "C" fn lzo1x_1_compress(
+pub unsafe fn lzo1x_1_compress(
     mut in_0: *const libc::c_uchar,
     mut in_len: lzo_uint,
     mut out: *mut libc::c_uchar,
@@ -999,8 +981,7 @@ pub unsafe extern "C" fn lzo1x_1_compress(
     return 0 as libc::c_int;
 }
 /* decompression */
-#[no_mangle]
-pub unsafe extern "C" fn lzo1x_decompress(
+pub unsafe fn lzo1x_decompress(
     mut in_0: *const libc::c_uchar,
     mut in_len: lzo_uint,
     mut out: *mut libc::c_uchar,
@@ -1377,9 +1358,7 @@ pub unsafe fn lzo1x_decompress_safe(
     *out_len = 0 as libc::c_int as lzo_uint;
     op = out;
     ip = in_0;
-    if !((ip_end.offset_from(ip) as libc::c_long as lzo_uint)
-        < 1 as libc::c_int as lzo_uint)
-    {
+    if !((ip_end.offset_from(ip) as libc::c_long as lzo_uint) < 1 as libc::c_int as lzo_uint) {
         if *ip as libc::c_int > 17 as libc::c_int {
             let fresh69 = ip;
             ip = ip.offset(1);
@@ -1487,8 +1466,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                             current_block = 10472394685181188800;
                                             break 's_92;
                                         }
-                                        if (ip_end.offset_from(ip) as libc::c_long
-                                            as lzo_uint)
+                                        if (ip_end.offset_from(ip) as libc::c_long as lzo_uint)
                                             < 1 as libc::c_int as lzo_uint
                                         {
                                             current_block = 10472394685181188800;
@@ -1653,8 +1631,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                                 current_block = 262178057513751245;
                                                 continue 's_92;
                                             }
-                                            if (ip_end.offset_from(ip) as libc::c_long
-                                                as lzo_uint)
+                                            if (ip_end.offset_from(ip) as libc::c_long as lzo_uint)
                                                 < 1 as libc::c_int as lzo_uint
                                             {
                                                 current_block = 10472394685181188800;
@@ -1668,8 +1645,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                                 as libc::c_ulong,
                                         ) as lzo_uint
                                             as lzo_uint;
-                                        if (ip_end.offset_from(ip) as libc::c_long
-                                            as lzo_uint)
+                                        if (ip_end.offset_from(ip) as libc::c_long as lzo_uint)
                                             < 2 as libc::c_int as lzo_uint
                                         {
                                             current_block = 10472394685181188800;
@@ -1706,8 +1682,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                                 current_block = 262178057513751245;
                                                 continue 's_92;
                                             }
-                                            if (ip_end.offset_from(ip) as libc::c_long
-                                                as lzo_uint)
+                                            if (ip_end.offset_from(ip) as libc::c_long as lzo_uint)
                                                 < 1 as libc::c_int as lzo_uint
                                             {
                                                 current_block = 10472394685181188800;
@@ -1721,8 +1696,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                                 as libc::c_ulong,
                                         ) as lzo_uint
                                             as lzo_uint;
-                                        if (ip_end.offset_from(ip) as libc::c_long
-                                            as lzo_uint)
+                                        if (ip_end.offset_from(ip) as libc::c_long as lzo_uint)
                                             < 2 as libc::c_int as lzo_uint
                                         {
                                             current_block = 10472394685181188800;
@@ -1737,8 +1711,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                     );
                                     ip = ip.offset(2 as libc::c_int as isize);
                                     if m_pos == op {
-                                        *out_len = op.offset_from(out) as libc::c_long
-                                            as lzo_uint;
+                                        *out_len = op.offset_from(out) as libc::c_long as lzo_uint;
                                         return if ip == ip_end {
                                             (0 as libc::c_int, ip.offset_from(in_0) as u32)
                                         } else if ip < ip_end {
@@ -1789,8 +1762,7 @@ pub unsafe fn lzo1x_decompress_safe(
                                             current_block = 7071516361779662619;
                                             break;
                                         }
-                                        if (op_end.offset_from(op) as libc::c_long
-                                            as lzo_uint)
+                                        if (op_end.offset_from(op) as libc::c_long as lzo_uint)
                                             < t.wrapping_add(3 as libc::c_int as libc::c_ulong)
                                                 .wrapping_sub(1 as libc::c_int as libc::c_ulong)
                                         {

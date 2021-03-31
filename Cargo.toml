@@ -1,5 +1,5 @@
 [package]
-name = "rust-minilzo"
+name = "minilzo3"
 version = "0.1.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
@@ -7,8 +7,6 @@ license-file = "LICENSE"
 readme = "README.md"
 description = "Pure Rust implementation of minilzo; initially created with c2rust."
 
-[lib]
-name = "rust_minilzo"
-
 [dependencies]
 libc = "0.2"
+thiserror = "^1"
