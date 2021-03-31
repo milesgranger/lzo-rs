@@ -72,7 +72,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
         let out_len: u32 = 0;
         let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
             input_buf.as_ptr(),
-            input_buf.len() as u64,
+            input_buf.len() as _,
             output.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
@@ -100,7 +100,7 @@ pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> 
         let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
         raw::lzo1x_1_compress(
             input.as_ptr(),
-            input.len() as u64,
+            input.len() as _,
             out.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
