@@ -135,7 +135,7 @@ pub fn compress_vec(input: &[u8], header: bool) -> Result<Vec<u8>, MiniLzoError>
 
 #[cfg(test)]
 mod tests {
-    use crate::{compress, decompress, max_compress_len};
+    use crate::{compress, decompress, max_compress_len, compress_vec, decompress_vec};
 
     fn gen_data() -> Vec<u8> {
         (0..100000)
@@ -145,16 +145,30 @@ mod tests {
     }
 
     #[test]
-    fn roundtrip() {
+    fn roundtrip_slices() {
         let input = gen_data();
 
         let mut compressed = vec![0; max_compress_len(input.len())];
         let n_bytes = compress(&input, compressed.as_mut_slice(), true).unwrap();
-        println!("{:?}", &compressed[..n_bytes]);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
         let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice()).unwrap();
 
         assert_eq!(&decompressed[..n_bytes], input.as_slice());
+    }
+
+    #[test]
+    fn rountrip_vecs_with_header() {
+        let input = gen_data();
+        let compressed = compress_vec(input.as_slice(), true).unwrap();
+        let decompressed = decompress_vec(compressed.as_slice()).unwrap();
+        assert_eq!(decompressed, input);
+    }
+    #[test]
+    fn rountrip_vecs_without_header() {
+        let input = gen_data();
+        let compressed = compress_vec(input.as_slice(), false).unwrap();
+        let decompressed = decompress_vec(compressed.as_slice());
+        assert!(decompressed.is_err())  // decompress_vec needs to have a header.
     }
 }
