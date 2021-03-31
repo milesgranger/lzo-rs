@@ -138,7 +138,7 @@ mod tests {
     use crate::{compress, decompress, max_compress_len};
 
     fn gen_data() -> Vec<u8> {
-        (0..10000)
+        (0..100000)
             .map(|_| b"Oh what a beautiful day, oh what a beaitufl morning!!!".to_vec())
             .flat_map(|v| v)
             .collect::<Vec<u8>>()
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        let input = b"bytes".to_vec();
+        let input = gen_data();
 
         let mut compressed = vec![0; max_compress_len(input.len())];
         let n_bytes = compress(&input, compressed.as_mut_slice(), true).unwrap();
