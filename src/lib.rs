@@ -10,23 +10,32 @@ use std::ffi::c_void;
 use std::io;
 use std::convert::TryInto;
 
-pub mod raw;
+pub(crate) mod raw;
 
 const BLOCK_SIZE: usize = 64000;
 const MAX_BLOCK_COMPRESS_SIZE: usize = BLOCK_SIZE + (BLOCK_SIZE / 16) + 64 + 3;
 
-pub fn init() {
+
+// Required by LZO to be called before operations
+fn init() {
     let r = unsafe { raw::lzo_initialize() };
     if r != 0 {
         panic!("Failed initialize LZO!");
     }
 }
 
+/// Calculate the max compressed len of an input.
 pub fn max_compress_len(input_len: usize) -> usize {
     // ref: docs/LZO.FAQ
     input_len + (input_len / 16) + 64 + 3
 }
 
+/// Convenience function to handle vec allocation for decompression, taking into account the header.
+///
+/// ### Note
+/// Will always fail if the input does not contain a header; if this is your case, you'll need
+/// to pre-allocate a vec of appropriate length for decompression output and use [decompress](fn.decompress.html)
+/// directly.
 pub fn decompress_vec(input: &[u8]) -> Vec<u8> {
     if [0xf0, 0xf1].contains(&input[0]) {
         let length_bytes: [u8; 4] = input[1..5].try_into().unwrap();
@@ -39,6 +48,7 @@ pub fn decompress_vec(input: &[u8]) -> Vec<u8> {
     }
 }
 
+/// Decompress input into output. Will ignore any header if present in the input.
 pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
     init();
 
@@ -67,6 +77,8 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
     n_bytes_written as usize
 }
 
+/// Compress input into output buffer, optionally with a header written to the front of the output
+/// buffer.
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
     init();
     unsafe {
@@ -93,6 +105,8 @@ pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
     }
 }
 
+/// Convenience function to compress input into an appropriately sized output buffer, optionally
+/// with a header.
 pub fn compress_vec(input: &[u8], header: bool) -> Vec<u8> {
     let mut output = vec![0; max_compress_len(input.len())];
     let n = compress(input, output.as_mut_slice(), header);
