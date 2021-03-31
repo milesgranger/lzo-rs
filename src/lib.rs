@@ -1,11 +1,8 @@
-
-
 extern crate libc;
 use std::convert::TryInto;
 use std::ffi::c_void;
 
 pub(crate) mod raw;
-
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -47,8 +44,9 @@ pub fn max_compress_len(input_len: usize) -> usize {
 pub fn decompress_vec(input: &[u8]) -> Result<Vec<u8>> {
     if [0xf0, 0xf1].contains(&input[0]) {
         let length_bytes: [u8; 4] = input[1..5].try_into().map_err(|_| Error::InvalidHeader)?;
-        let mut output = vec![0; u32::from_be_bytes(length_bytes) as usize];
-        let n = decompress(&input[5..], output.as_mut_slice())?;
+        let length = u32::from_be_bytes(length_bytes) as usize;
+        let mut output = vec![0; length];
+        let n = decompress(input, output.as_mut_slice())?;
         output.truncate(n);
         Ok(output)
     } else {
@@ -67,12 +65,12 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
         &input[..]
     };
 
-    let (n_bytes_written, _n_bytes_consumed) = unsafe {
+    let n_bytes_written = unsafe {
         let mut wrkmem: [u8; 0] = std::mem::MaybeUninit::uninit().assume_init();
         let out_len: u32 = 0;
-        let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
+        let r = raw::lzo1x_decompress(
             input_buf.as_ptr(),
-            input_buf.len() as u64,
+            input_buf.len() as _,
             output.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
@@ -80,7 +78,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
         if r != 0 {
             return Err(Error::LzoError { code: r as i8 });
         }
-        (out_len, n_consumed_bytes)
+        out_len
     };
     Ok(n_bytes_written as usize)
 }
@@ -90,7 +88,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> {
     init()?;
 
-    let mut out_len: u64 = 0;
+    let mut out_len = 0;
     let out = if header {
         &mut output[5..]
     } else {
@@ -100,7 +98,7 @@ pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> 
         let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
         raw::lzo1x_1_compress(
             input.as_ptr(),
-            input.len() as u64,
+            input.len() as _,
             out.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
