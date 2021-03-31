@@ -1,9 +1,4 @@
-#![allow(dead_code)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(non_upper_case_globals)]
-#![allow(unused_assignments)]
-#![allow(unused_mut)]
+
 
 extern crate libc;
 use std::convert::TryInto;
@@ -11,11 +6,10 @@ use std::ffi::c_void;
 
 pub(crate) mod raw;
 
-const BLOCK_SIZE: usize = 64000;
-const MAX_BLOCK_COMPRESS_SIZE: usize = BLOCK_SIZE + (BLOCK_SIZE / 16) + 64 + 3;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Convenience Error type
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Header expected but not found.")]
@@ -75,7 +69,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
 
     let (n_bytes_written, _n_bytes_consumed) = unsafe {
         let mut wrkmem: [u8; 0] = std::mem::MaybeUninit::uninit().assume_init();
-        let mut out_len: u32 = 0;
+        let out_len: u32 = 0;
         let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
             input_buf.as_ptr(),
             input_buf.len() as u64,
@@ -96,8 +90,8 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> {
     init()?;
 
-    let mut out_len = 0;
-    let mut out = if header {
+    let mut out_len: u64 = 0;
+    let out = if header {
         &mut output[5..]
     } else {
         &mut output[..]
