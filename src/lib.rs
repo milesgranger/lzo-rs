@@ -56,7 +56,7 @@ pub fn decompress_vec(input: &[u8]) -> Result<Vec<u8>> {
 
 /// Decompress input into output. Will ignore any header if present in the input.
 pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
-    init()?;
+    //init()?;
 
     // Determine if there is a header
     let input_buf = if [0xf0, 0xf1].contains(&input[0]) {
@@ -86,7 +86,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
 /// Compress input into output buffer, optionally with a header written to the front of the output
 /// buffer.
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> {
-    init()?;
+    //init()?;
 
     let mut out_len: u64 = 0;
     let out = if header {
