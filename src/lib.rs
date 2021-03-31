@@ -8,6 +8,7 @@
 extern crate libc;
 use std::ffi::c_void;
 use std::io;
+use std::convert::TryInto;
 
 pub mod raw;
 
@@ -26,14 +27,22 @@ pub fn max_compress_len(input_len: usize) -> usize {
     input_len + (input_len / 16) + 64 + 3
 }
 
-pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
+pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
     init();
-    let (n_bytes_written, n_bytes_consumed) = unsafe {
+
+    // Determine if there is a header
+    let input_buf = if [0xf0, 0xf1].contains(&input[0]) {
+        &input[5..]
+    } else {
+        &input[..]
+    };
+
+    let (n_bytes_written, _n_bytes_consumed) = unsafe {
         let mut wrkmem: [u8; 0] = std::mem::MaybeUninit::uninit().assume_init();
         let mut out_len: u32 = 0;
         let (r, n_consumed_bytes) = raw::lzo1x_decompress_safe(
-            input.as_ptr(),
-            input.len() as u64,
+            input_buf.as_ptr(),
+            input_buf.len() as u64,
             output.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
@@ -43,7 +52,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
         }
         (out_len, n_consumed_bytes)
     };
-    (n_bytes_written as usize, n_bytes_consumed as usize)
+    n_bytes_written as usize
 }
 
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
@@ -170,10 +179,9 @@ mod tests {
         println!("{:?}", &compressed[..n_bytes]);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
-        let (n_bytes_written, _n_bytes_consumed) =
-            decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
+        let n_bytes = decompress(&compressed[..n_bytes], decompressed.as_mut_slice());
 
-        assert_eq!(&decompressed[..n_bytes_written], input.as_slice());
+        assert_eq!(&decompressed[..n_bytes], input.as_slice());
     }
 
     #[test]
