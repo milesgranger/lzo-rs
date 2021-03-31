@@ -88,7 +88,7 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> Result<usize> {
 pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> Result<usize> {
     //init()?;
 
-    let mut out_len: u64 = 0;
+    let mut out_len = 0;
     let out = if header {
         &mut output[5..]
     } else {
