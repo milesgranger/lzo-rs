@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  release:
+    types:
+      - released
+      - prereleased
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          profile: minimal
+          default: true
+      - name: Build
+        run: cargo build
+      - name: Tests
+        run: cargo test
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          default: true
+      - name: Build
+        run: cargo build
+      - name: Tests
+        run: cargo test
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        default: true
+    - name: Build
+      run: cargo build
+    - name: Tests
+      run: cargo test
