@@ -17,7 +17,7 @@ const MAX_BLOCK_COMPRESS_SIZE: usize = BLOCK_SIZE + (BLOCK_SIZE / 16) + 64 + 3;
 
 pub fn init() {
     let r = unsafe { raw::lzo_initialize() };
-    if !r == 0 {
+    if r != 0 {
         panic!("Failed initialize LZO!");
     }
 }
@@ -25,6 +25,18 @@ pub fn init() {
 pub fn max_compress_len(input_len: usize) -> usize {
     // ref: docs/LZO.FAQ
     input_len + (input_len / 16) + 64 + 3
+}
+
+pub fn decompress_vec(input: &[u8]) -> Vec<u8> {
+    if [0xf0, 0xf1].contains(&input[0]) {
+        let length_bytes: [u8; 4] = input[1..5].try_into().unwrap();
+        let mut output = vec![0; u32::from_be_bytes(length_bytes) as usize];
+        let n = decompress(&input[5..], output.as_mut_slice());
+        output.truncate(n);
+        output
+    } else {
+        todo!("Only support for input with header")
+    }
 }
 
 pub fn decompress(input: &[u8], output: &mut [u8]) -> usize {
@@ -79,6 +91,13 @@ pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
         }
         out_len as usize
     }
+}
+
+pub fn compress_vec(input: &[u8], header: bool) -> Vec<u8> {
+    let mut output = vec![0; max_compress_len(input.len())];
+    let n = compress(input, output.as_mut_slice(), header);
+    output.truncate(n);
+    output
 }
 
 #[cfg(test)]
