@@ -46,21 +46,27 @@ pub fn decompress(input: &[u8], output: &mut [u8]) -> (usize, usize) {
     (n_bytes_written as usize, n_bytes_consumed as usize)
 }
 
-pub fn compress(input: &[u8], output: &mut [u8]) -> usize {
+pub fn compress(input: &[u8], output: &mut [u8], header: bool) -> usize {
     init();
     unsafe {
         let mut wrkmem: [u8; 64000] = std::mem::MaybeUninit::uninit().assume_init();
 
         let mut out_len = 0;
+        let mut out = if header { &mut output[5..] } else { &mut output[..] };
         let v = raw::lzo1x_1_compress(
             input.as_ptr(),
             input.len() as u64,
-            output.as_mut_ptr(),
+            out.as_mut_ptr(),
             &out_len as *const _ as *mut _,
             wrkmem.as_mut_ptr() as *mut c_void,
         );
         if v != 0 {
             panic!("Failed to compress, exit code: {}", v);
+        }
+        if header {
+            output[0] = 0xf0;
+            output[1..5].copy_from_slice(&(input.len() as u32).to_be_bytes());
+            out_len += 5;
         }
         out_len as usize
     }
@@ -110,7 +116,6 @@ pub struct Encoder<R: io::Read> {
     wrk_memory: [u8; 64000],
     buf: [u8; 64000]
 }
-
 impl<R: io::Read> Encoder<R> {
     pub fn new(inner: R) -> Self {
         init();
@@ -121,7 +126,6 @@ impl<R: io::Read> Encoder<R> {
         }
     }
 }
-
 impl<R: io::Read> io::Read for Encoder<R> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let n_bytes = self.inner.read(&mut self.buf)?;
@@ -159,10 +163,11 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        let input = gen_data();
+        let input = b"bytes".to_vec();
 
         let mut compressed = vec![0; max_compress_len(input.len())];
-        let n_bytes = compress(&input, compressed.as_mut_slice());
+        let n_bytes = compress(&input, compressed.as_mut_slice(), true);
+        println!("{:?}", &compressed[..n_bytes]);
 
         let mut decompressed: Vec<u8> = vec![0; input.len()];
         let (n_bytes_written, _n_bytes_consumed) =
